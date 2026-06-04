@@ -1,0 +1,390 @@
+{
+  "name": "file-tools-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing file_tools for local LM Studio",
+  "mcp_schema_version": "2025-11-25",
+  "transport": "stdio",
+  "exec": {
+    "command": "c:\\Dev\\mcp-file-tools\\.venv\\Scripts\\python.exe",
+    "args": [
+      "mcp_file_tools.py"
+    ],
+    "cwd": "."
+  },
+  "env": {},
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "list_files",
+        "description": "List files in a directory. Use before reading to understand structure.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "directory": {
+              "type": "string",
+              "default": "."
+            },
+            "pattern": {
+              "type": "string",
+              "default": "*",
+              "description": "Glob pattern e.g. '**/*.py'"
+            },
+            "recursive": {
+              "type": "boolean",
+              "default": false
+            },
+            "max_results": {
+              "type": "integer",
+              "default": 200
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "file_info",
+        "description": "Get file metadata (size, line count, pages needed) without reading content. Always call this first on unknown files to decide whether to read all at once or paginate.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read a file or a line range. Use start_line/end_line to paginate large files. Lines are annotated with numbers so you can target patches precisely.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "start_line": {
+              "type": "integer",
+              "default": 1
+            },
+            "end_line": {
+              "type": "integer",
+              "description": "Omit for EOF"
+            },
+            "annotate": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file_chunk",
+        "description": "Read a specific page of a large file (200 lines per page by default).",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "page": {
+              "type": "integer",
+              "default": 1
+            },
+            "page_size": {
+              "type": "integer",
+              "default": 200
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_file",
+        "description": "Grep a file for a string or regex. Returns matching lines + context. Use to locate code before patching without reading the whole file.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path",
+            "pattern"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "pattern": {
+              "type": "string"
+            },
+            "context_lines": {
+              "type": "integer",
+              "default": 2
+            },
+            "max_matches": {
+              "type": "integer",
+              "default": 40
+            },
+            "regex": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "find_symbol",
+        "description": "Find where a function, class, or variable is defined in a source file. Returns line numbers so you can read_file with start_line/end_line.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path",
+            "symbol"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "symbol": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "function",
+                "class",
+                "variable",
+                "any"
+              ],
+              "default": "any"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_file",
+        "description": "Write a complete file. Use only for new or small files. For edits to large files, use patch_file.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path",
+            "content"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "overwrite": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "append_file",
+        "description": "Append text to a file (creates it if missing). Good for logs, adding new functions at end of file.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path",
+            "content"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "newline_before": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "patch_file",
+        "description": "Replace a range of lines in a file. The primary tool for editing large files. Use search_file or find_symbol to locate the lines first, then replace only the changed region.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path",
+            "start_line",
+            "end_line",
+            "new_content"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "start_line": {
+              "type": "integer"
+            },
+            "end_line": {
+              "type": "integer"
+            },
+            "new_content": {
+              "type": "string"
+            },
+            "dry_run": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "diff_files",
+        "description": "Produce a unified diff between two files. Useful for reviewing changes before committing.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path_a",
+            "path_b"
+          ],
+          "properties": {
+            "path_a": {
+              "type": "string"
+            },
+            "path_b": {
+              "type": "string"
+            },
+            "context_lines": {
+              "type": "integer",
+              "default": 3
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_chunk_begin",
+        "description": "Open a chunked-write session before generating a large file. Call ONCE before the first write_chunk. Declare expected_lines if you know roughly how long the file will be.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "expected_lines": {
+              "type": "integer",
+              "description": "Estimated total lines"
+            },
+            "overwrite": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_chunk",
+        "description": "Append one chunk of generated content to the active write session. Each chunk should be 150-200 lines. Echo expected_tail_hash from the previous call to verify the join point.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "session_id",
+            "content"
+          ],
+          "properties": {
+            "session_id": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "expected_tail_hash": {
+              "type": "string",
+              "description": "Echo the tail_hash returned by the previous write_chunk to verify join integrity."
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_chunk_commit",
+        "description": "Finalize a write session and validate the completed file. Call ONCE after all write_chunk calls. Returns verdict: ok | warnings | needs_repair, plus a list of issues.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "session_id"
+          ],
+          "properties": {
+            "session_id": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "validate_file",
+        "description": "Run structural validation on any existing file. Use after patch_file repairs to confirm the file is clean.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "path"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "expected_lines": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "notes": "Tools are dynamically registered by the server at runtime."
+}

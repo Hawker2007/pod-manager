@@ -1,0 +1,9 @@
+# Requirements for the MCP file tools service
+# Install in the mcp-file-tools virtual environment.
+
+mcp
+pydantic
+httpx
+beautifulsoup4
+markdownify
+readability-lxml
